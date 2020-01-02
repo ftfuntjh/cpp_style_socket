@@ -8,11 +8,12 @@ using namespace std;
 using namespace network;
 
 int main(int argc, char *argv[]) {
-    auto socket = Socket::create(AF_INET, SOCK_STREAM, 0);
-    socket.setOption(option::SocketDebug{1});
-    socket.setOption(option::SocketKeepAlive{1});
+    auto tcp = Socket::tcp();
+    auto udp = Socket::udp();
     auto type = option::SocketType{};
-    socket.getOption(type);
-    cout << "socket type: " << type.value << endl;
+    tcp.getOption(type);
+    cout << "tcp socket type: " << type.value << endl;
+    udp.getOption(type);
+    cout << "udp socket type: " << type.value << endl;
     return 0;
 }

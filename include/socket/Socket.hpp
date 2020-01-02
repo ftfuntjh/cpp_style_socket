@@ -59,10 +59,14 @@ namespace network {
         template<typename OptionStatus, typename = typename std::enable_if<std::is_convertible<OptionStatus, ReadableOption>::value, OptionStatus>::type>
         void getOption(OptionStatus &option);
 
-        template<typename OptionStatus, typename = typename std::enable_if<std::is_convertible<OptionStatus, ReadableOption>::value, OptionStatus>::type>
+        template<typename OptionStatus, typename = typename std::enable_if<std::is_convertible<OptionStatus, WriteableOption>::value, OptionStatus>::type>
         void setOption(const OptionStatus &option);
 
         static Socket create(int protoFamily, int type, int protocol);
+
+        static Socket tcp();
+
+        static Socket udp();
 
     private:
         int fd_;
@@ -107,6 +111,14 @@ namespace network {
         if (fd_ >= 0) {
             ::close(fd_);
         }
+    }
+
+    Socket Socket::tcp() {
+        return create(AF_INET, SOCK_STREAM, 0);
+    }
+
+    Socket Socket::udp() {
+        return create(AF_INET, SOCK_DGRAM, 0);
     }
 
 
