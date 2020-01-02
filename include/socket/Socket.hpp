@@ -8,19 +8,32 @@
 
 namespace network {
     namespace {
-        template<int Level, int OptionName, typename OptionValue>
-        struct SocketOption {
+        struct ReadableOption {
+
+        };
+
+        struct WriteableOption {
+
+        };
+
+        struct ReadWriteOption : public ReadableOption, WriteableOption {
+
+        };
+
+        template<int Level, int OptionName, typename OptionValue, typename OptionState>
+        struct SocketOption : public OptionState {
             int level = Level;
             int option = OptionName;
             OptionValue value;
             unsigned int size;
 
-            SocketOption() : value{}, size{sizeof(OptionValue)} {
+            SocketOption() : OptionState{}, value{}, size{sizeof(OptionValue)} {
 
             }
 
 
-            explicit SocketOption(OptionValue &&value_) : value(std::forward<OptionValue>(value_)),
+            explicit SocketOption(OptionValue &&value_) : OptionState{},
+                                                          value(std::forward<OptionValue>(value_)),
                                                           size{sizeof(OptionValue)} {
 
             }
@@ -39,15 +52,15 @@ namespace network {
 
         void listen() &;
 
-        void read();
+        void read() &;
 
-        void write();
+        void write() &;
 
-        template<int Level, int OptionName, typename OptionValue>
-        void getOption(SocketOption<Level, OptionName, OptionValue> &option);
+        template<typename OptionStatus, typename = typename std::enable_if<std::is_convertible<OptionStatus, ReadableOption>::value, OptionStatus>::type>
+        void getOption(OptionStatus &option);
 
-        template<int Level, int OptionName, typename OptionValue>
-        void setOption(const SocketOption<Level, OptionName, OptionValue> &option);
+        template<typename OptionStatus, typename = typename std::enable_if<std::is_convertible<OptionStatus, ReadableOption>::value, OptionStatus>::type>
+        void setOption(const OptionStatus &option);
 
         static Socket create(int protoFamily, int type, int protocol);
 
@@ -71,8 +84,8 @@ namespace network {
         return Socket(fd);
     }
 
-    template<int Level, int OptionName, typename OptionValue>
-    void Socket::getOption(SocketOption<Level, OptionName, OptionValue> &option) {
+    template<typename OptionStatus, typename>
+    void Socket::getOption(OptionStatus &option) {
         int result = ::getsockopt(fd_, option.level, option.option, static_cast<void *>(&option.value),
                                   static_cast<unsigned int *>(&option.size));
         if (result != 0) {
@@ -80,8 +93,9 @@ namespace network {
         }
     }
 
-    template<int Level, int OptionName, typename OptionValue>
-    void Socket::setOption(const SocketOption<Level, OptionName, OptionValue> &option) {
+    template<typename OptionStatus, typename>
+    void Socket::setOption(
+            const OptionStatus &option) {
         int result = ::setsockopt(fd_, option.level, option.option, static_cast<const void *>( &option.value),
                                   option.size);
         if (result != 0) {
@@ -90,7 +104,7 @@ namespace network {
     }
 
     Socket::~Socket() {
-        if (fd_ > 0) {
+        if (fd_ >= 0) {
             ::close(fd_);
         }
     }
@@ -100,39 +114,39 @@ namespace network {
         /**
          * SOL_SOCKET Option
          */
-        using SocketBoardCast = SocketOption<SOL_SOCKET, SO_BROADCAST, int>;
-        using SocketDebug =  SocketOption<SOL_SOCKET, SO_DEBUG, int>;
-        using SocketDontRoute = SocketOption<SOL_SOCKET, SO_DONTROUTE, int>;
-        using SocketKeepAlive = SocketOption<SOL_SOCKET, SO_KEEPALIVE, int>;
-        using SocketLinger = SocketOption<SOL_SOCKET, SO_LINGER, struct ::linger>;
-        using SocketOObinLine = SocketOption<SOL_SOCKET, SO_OOBINLINE, int>;
-        using SocketReciveBuffer = SocketOption<SOL_SOCKET, SO_RCVBUF, int>;
-        using SocketSendBuf = SocketOption<SOL_SOCKET, SO_SNDBUF, int>;
-        using SocketReciveLowat = SocketOption<SOL_SOCKET, SO_RCVLOWAT, int>;
-        using SocketSendLowat = SocketOption<SOL_SOCKET, SO_SNDLOWAT, int>;
-        using SocketReciveTimeOut =SocketOption<SOL_SOCKET, SO_RCVTIMEO, struct ::timeval>;
-        using SocketSendTimeOut = SocketOption<SOL_SOCKET, SO_SNDTIMEO, struct ::timeval>;
-        using SocketReuseAddress =SocketOption<SOL_SOCKET, SO_REUSEADDR, int>;
-        using SocketReusePort = SocketOption<SOL_SOCKET, SO_REUSEADDR, int>;
-        using SocketType = SocketOption<SOL_SOCKET, SO_TYPE, int>;
-        using SocketAcceptConnection = SocketOption<SOL_SOCKET, SO_ACCEPTCONN, int>;
-        using SocketUseLoopBack = SocketOption<SOL_SOCKET, SO_USELOOPBACK, int>;
+        using SocketBoardCast = SocketOption<SOL_SOCKET, SO_BROADCAST, int, ReadWriteOption>;
+        using SocketDebug =  SocketOption<SOL_SOCKET, SO_DEBUG, int, ReadWriteOption>;
+        using SocketDontRoute = SocketOption<SOL_SOCKET, SO_DONTROUTE, int, ReadWriteOption>;
+        using SocketKeepAlive = SocketOption<SOL_SOCKET, SO_KEEPALIVE, int, ReadWriteOption>;
+        using SocketLinger = SocketOption<SOL_SOCKET, SO_LINGER, struct ::linger, ReadWriteOption>;
+        using SocketOObinLine = SocketOption<SOL_SOCKET, SO_OOBINLINE, int, ReadWriteOption>;
+        using SocketReciveBuffer = SocketOption<SOL_SOCKET, SO_RCVBUF, int, ReadWriteOption>;
+        using SocketSendBuf = SocketOption<SOL_SOCKET, SO_SNDBUF, int, ReadWriteOption>;
+        using SocketReciveLowat = SocketOption<SOL_SOCKET, SO_RCVLOWAT, int, ReadWriteOption>;
+        using SocketSendLowat = SocketOption<SOL_SOCKET, SO_SNDLOWAT, int, ReadWriteOption>;
+        using SocketReciveTimeOut =SocketOption<SOL_SOCKET, SO_RCVTIMEO, struct ::timeval, ReadWriteOption>;
+        using SocketSendTimeOut = SocketOption<SOL_SOCKET, SO_SNDTIMEO, struct ::timeval, ReadWriteOption>;
+        using SocketReuseAddress =SocketOption<SOL_SOCKET, SO_REUSEADDR, int, ReadWriteOption>;
+        using SocketReusePort = SocketOption<SOL_SOCKET, SO_REUSEADDR, int, ReadWriteOption>;
+        using SocketType = SocketOption<SOL_SOCKET, SO_TYPE, int, ReadWriteOption>;
+        using SocketAcceptConnection = SocketOption<SOL_SOCKET, SO_ACCEPTCONN, int, ReadWriteOption>;
+        using SocketUseLoopBack = SocketOption<SOL_SOCKET, SO_USELOOPBACK, int, ReadWriteOption>;
 
         /**
          * IPPROTO_IP Option
          */
-        using IpHeaderInclude = SocketOption<IPPROTO_IP, IP_HDRINCL, int>;
-        using IpOptions = SocketOption<IPPROTO_IP, IP_OPTIONS, void *>;
-        using IpReceiveDestAddress = SocketOption<IPPROTO_IP, IP_RECVDSTADDR, int>;
-        using IpReceiveInterface = SocketOption<IPPROTO_IP, IP_RECVIF, int>;
-        using IpTOS = SocketOption<IPPROTO_IP, IP_TOS, int>;
-        using IpTTL = SocketOption<IPPROTO_IP, IP_TTL, int>;
-        using IpMulticastInterface = SocketOption<IPPROTO_IP, IP_MULTICAST_IF, struct in_addr>;
-        using IpMulticastTTL = SocketOption<IPPROTO_IP, IP_MULTICAST_TTL, u_char>;
-        using IpMulticastLoop = SocketOption<IPPROTO_IP, IP_MULTICAST_LOOP, u_char>;
-        using IpAddMemberShip = SocketOption<IPPROTO_IP, IP_ADD_MEMBERSHIP, struct ::ip_mreq>;
-        using IpDropMemberShip = SocketOption<IPPROTO_IP, IP_DROP_MEMBERSHIP, struct ::ip_mreq>;
-        using IpBlockSource = SocketOption<IPPROTO_IP, IP_BLOCK_SOURCE, struct ::ip_mreq_source>;
+        using IpHeaderInclude = SocketOption<IPPROTO_IP, IP_HDRINCL, int, ReadWriteOption>;
+        using IpOptions = SocketOption<IPPROTO_IP, IP_OPTIONS, void *, ReadWriteOption>;
+        using IpReceiveDestAddress = SocketOption<IPPROTO_IP, IP_RECVDSTADDR, int, ReadWriteOption>;
+        using IpReceiveInterface = SocketOption<IPPROTO_IP, IP_RECVIF, int, ReadWriteOption>;
+        using IpTOS = SocketOption<IPPROTO_IP, IP_TOS, int, ReadWriteOption>;
+        using IpTTL = SocketOption<IPPROTO_IP, IP_TTL, int, ReadWriteOption>;
+        using IpMulticastInterface = SocketOption<IPPROTO_IP, IP_MULTICAST_IF, struct in_addr, ReadWriteOption>;
+        using IpMulticastTTL = SocketOption<IPPROTO_IP, IP_MULTICAST_TTL, u_char, ReadWriteOption>;
+        using IpMulticastLoop = SocketOption<IPPROTO_IP, IP_MULTICAST_LOOP, u_char, ReadWriteOption>;
+        using IpAddMemberShip = SocketOption<IPPROTO_IP, IP_ADD_MEMBERSHIP, struct ::ip_mreq, ReadWriteOption>;
+        using IpDropMemberShip = SocketOption<IPPROTO_IP, IP_DROP_MEMBERSHIP, struct ::ip_mreq, ReadWriteOption>;
+        using IpBlockSource = SocketOption<IPPROTO_IP, IP_BLOCK_SOURCE, struct ::ip_mreq_source, ReadWriteOption>;
     }
 }
 

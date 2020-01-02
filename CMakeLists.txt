@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(network_utils)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 
 option(ENABLE_TEST "enable build test code" OFF)
 
