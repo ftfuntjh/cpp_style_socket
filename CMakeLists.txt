@@ -3,7 +3,7 @@ project(socket)
 
 set(CMAKE_CXX_STANDARD 14)
 
-option(ENABLE)
+option(ENABLE_TEST "enable build test code" OFF)
 
 add_library(network_utils INTERFACE)
 target_include_directories(network_utils INTERFACE include)
