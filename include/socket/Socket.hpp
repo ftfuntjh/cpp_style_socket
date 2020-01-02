@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <system_error>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
 
 namespace network {
     namespace {
@@ -11,12 +13,15 @@ namespace network {
             int level = Level;
             int option = OptionName;
             OptionValue value;
+            unsigned int size;
 
-            SocketOption() : value{} {
+            SocketOption() : value{}, size{sizeof(OptionValue)} {
 
             }
 
-            explicit SocketOption(OptionValue &&value_) : value(std::forward<OptionValue>(value_)) {
+
+            explicit SocketOption(OptionValue &&value_) : value(std::forward<OptionValue>(value_)),
+                                                          size{sizeof(OptionValue)} {
 
             }
         };
@@ -39,10 +44,10 @@ namespace network {
         void write();
 
         template<int Level, int OptionName, typename OptionValue>
-        void getOption(SocketOption<Level, OptionName, OptionValue> &&option);
+        void getOption(SocketOption<Level, OptionName, OptionValue> &option);
 
         template<int Level, int OptionName, typename OptionValue>
-        void setOption(SocketOption<Level, OptionName, OptionValue> &&option);
+        void setOption(const SocketOption<Level, OptionName, OptionValue> &option);
 
         static Socket create(int protoFamily, int type, int protocol);
 
@@ -67,16 +72,18 @@ namespace network {
     }
 
     template<int Level, int OptionName, typename OptionValue>
-    void Socket::getOption(const SocketOption<Level, OptionName, OptionValue> &option) {
-        int result = ::getsockopt(fd_, option.level, option.option, &option.value, sizeof(option.value));
+    void Socket::getOption(SocketOption<Level, OptionName, OptionValue> &option) {
+        int result = ::getsockopt(fd_, option.level, option.option, static_cast<void *>(&option.value),
+                                  static_cast<unsigned int *>(&option.size));
         if (result != 0) {
             throw std::system_error(errno, std::generic_category());
         }
     }
 
     template<int Level, int OptionName, typename OptionValue>
-    void Socket::setOption(SocketOption<Level, OptionName, OptionValue> &option) {
-        int result = ::setsockopt(fd_, option.level, option.option, &option.value, sizeof(option.value));
+    void Socket::setOption(const SocketOption<Level, OptionName, OptionValue> &option) {
+        int result = ::setsockopt(fd_, option.level, option.option, static_cast<const void *>( &option.value),
+                                  option.size);
         if (result != 0) {
             throw std::system_error(errno, std::generic_category());
         }
@@ -99,9 +106,9 @@ namespace network {
         using SocketKeepAlive = SocketOption<SOL_SOCKET, SO_KEEPALIVE, int>;
         using SocketLinger = SocketOption<SOL_SOCKET, SO_LINGER, struct ::linger>;
         using SocketOObinLine = SocketOption<SOL_SOCKET, SO_OOBINLINE, int>;
-        using SocketReciveBuffer = SocketOption<SOL_SOCKET, SO_REVBUF, int>;
+        using SocketReciveBuffer = SocketOption<SOL_SOCKET, SO_RCVBUF, int>;
         using SocketSendBuf = SocketOption<SOL_SOCKET, SO_SNDBUF, int>;
-        using SocketReciveLowat = SocketOption<SOL_SOCKET, SO_RECLOWAT, int>;
+        using SocketReciveLowat = SocketOption<SOL_SOCKET, SO_RCVLOWAT, int>;
         using SocketSendLowat = SocketOption<SOL_SOCKET, SO_SNDLOWAT, int>;
         using SocketReciveTimeOut =SocketOption<SOL_SOCKET, SO_RCVTIMEO, struct ::timeval>;
         using SocketSendTimeOut = SocketOption<SOL_SOCKET, SO_SNDTIMEO, struct ::timeval>;
@@ -123,8 +130,8 @@ namespace network {
         using IpMulticastInterface = SocketOption<IPPROTO_IP, IP_MULTICAST_IF, struct in_addr>;
         using IpMulticastTTL = SocketOption<IPPROTO_IP, IP_MULTICAST_TTL, u_char>;
         using IpMulticastLoop = SocketOption<IPPROTO_IP, IP_MULTICAST_LOOP, u_char>;
-        using IpAddMemberShip = SocketOption<IPPROTO_IP, IP_ADD_MEMBSHIP, struct ::ip_mreq>;
-        using IpDropMemberShip = SocketOption<IPPROTO_IP, IP_DROP_MEMBSHIP, struct ::ip_mreq>;
+        using IpAddMemberShip = SocketOption<IPPROTO_IP, IP_ADD_MEMBERSHIP, struct ::ip_mreq>;
+        using IpDropMemberShip = SocketOption<IPPROTO_IP, IP_DROP_MEMBERSHIP, struct ::ip_mreq>;
         using IpBlockSource = SocketOption<IPPROTO_IP, IP_BLOCK_SOURCE, struct ::ip_mreq_source>;
     }
 }
