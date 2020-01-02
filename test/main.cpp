@@ -5,12 +5,14 @@
 #include <iostream>
 
 using namespace std;
+using namespace network;
 
 int main(int argc, char *argv[]) {
-    auto socket = network::Socket::create(AF_INET, SOCK_STREAM, 0);
-    socket.setOption(network::option::SocketDebug{1});
-    auto type = network::option::SocketType{};
+    auto socket = Socket::create(AF_INET, SOCK_STREAM, 0);
+    socket.setOption(option::SocketDebug{1});
+    socket.setOption(option::SocketKeepAlive{1});
+    auto type = option::SocketType{};
     socket.getOption(type);
-    cout << type.value << endl;
+    cout << "socket type: " << type.value << endl;
     return 0;
 }
